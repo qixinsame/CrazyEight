@@ -287,8 +287,16 @@ export default function App() {
               </div>
             </div>
           ) : (
-             <div className="w-32 h-48 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center">
-               <span className="text-white/20 font-medium">Empty</span>
+             <div 
+               onClick={handlePlayerDraw}
+               className={clsx(
+                 "w-32 h-48 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center transition-all",
+                 gameState.currentTurn === 'player' ? 'cursor-pointer hover:bg-white/5 ring-4 ring-yellow-400/50' : ''
+               )}
+             >
+               <span className="text-white/40 font-bold uppercase tracking-widest">
+                 {gameState.discardPile.length > 1 ? 'Shuffle' : 'Pass'}
+               </span>
              </div>
           )}
           <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-sm font-medium opacity-60">
