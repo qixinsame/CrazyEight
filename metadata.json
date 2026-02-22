@@ -1,0 +1,5 @@
+{
+  "name": "Crazy Eights",
+  "description": "A classic card game where you match suits or ranks to be the first to empty your hand.",
+  "requestFramePermissions": []
+}
