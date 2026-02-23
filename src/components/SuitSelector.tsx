@@ -5,9 +5,10 @@ import { motion } from 'motion/react';
 
 interface SuitSelectorProps {
   onSelect: (suit: Suit) => void;
+  onCancel: () => void;
 }
 
-export const SuitSelector: React.FC<SuitSelectorProps> = ({ onSelect }) => {
+export const SuitSelector: React.FC<SuitSelectorProps> = ({ onSelect, onCancel }) => {
   const suits: { suit: Suit; icon: React.ReactNode; color: string }[] = [
     { suit: 'hearts', icon: <Heart className="w-8 h-8" />, color: 'bg-red-100 text-red-600 hover:bg-red-200' },
     { suit: 'diamonds', icon: <Diamond className="w-8 h-8" />, color: 'bg-red-100 text-red-600 hover:bg-red-200' },
@@ -23,7 +24,7 @@ export const SuitSelector: React.FC<SuitSelectorProps> = ({ onSelect }) => {
     >
       <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
         <h2 className="text-xl font-bold text-center mb-4">Select a Suit</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 mb-4">
           {suits.map(({ suit, icon, color }) => (
             <button
               key={suit}
@@ -35,6 +36,12 @@ export const SuitSelector: React.FC<SuitSelectorProps> = ({ onSelect }) => {
             </button>
           ))}
         </div>
+        <button
+          onClick={onCancel}
+          className="w-full py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+        >
+          Cancel
+        </button>
       </div>
     </motion.div>
   );

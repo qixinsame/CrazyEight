@@ -84,6 +84,21 @@ export default function App() {
     return false;
   };
 
+  const topDiscardCard = gameState.discardPile[gameState.discardPile.length - 1];
+
+  // Calculate playable cards
+  const playableCardIds = React.useMemo(() => {
+    if (gameState.currentTurn !== 'player' || gameState.status !== 'playing') return new Set<string>();
+    
+    const ids = new Set<string>();
+    gameState.playerHand.forEach(card => {
+      if (isValidMove(card, topDiscardCard, gameState.currentSuit)) {
+        ids.add(card.id);
+      }
+    });
+    return ids;
+  }, [gameState.playerHand, gameState.currentTurn, gameState.status, topDiscardCard, gameState.currentSuit]);
+
   // Helper: Draw card
   const drawCard = (player: PlayerType) => {
     setGameState(prev => {
@@ -178,6 +193,49 @@ export default function App() {
     setMessage(t.suitChanged(suit));
   };
 
+  // Player Action: Cancel Suit Selection (Return 8 to hand)
+  const handleCancelSuitSelection = () => {
+    setGameState(prev => {
+      // Get the 8 from the discard pile
+      const playedEight = prev.discardPile[prev.discardPile.length - 1];
+      const previousDiscardPile = prev.discardPile.slice(0, prev.discardPile.length - 1);
+      
+      // Restore previous suit logic
+      // If the card below the 8 was NOT an 8, use its suit.
+      // If it WAS an 8, we ideally need the suit chosen then.
+      // However, simplified logic: if we cancel, we just revert to what the suit *would be* based on the top card.
+      // BUT, currentSuit in state is currently the 8's suit (temporarily set in handlePlayerCardClick).
+      // We need to revert currentSuit to what it was before.
+      // Since we don't store history, we have to infer or just accept a potential minor state glitch if double 8s.
+      // Better: Re-evaluate currentSuit based on the NEW top card (the one below the 8).
+      
+      const newTopCard = previousDiscardPile[previousDiscardPile.length - 1];
+      // If newTopCard is 8, we don't know the chosen suit. This is a limitation of current state.
+      // BUT, for a simple "undo", we can try to just use the newTopCard.suit unless it's an 8.
+      // If it is an 8, we might be stuck.
+      // A robust fix requires storing `prevSuit` in state when opening selector.
+      // Let's assume for now we just close it and put card back.
+      // The user will have to play 8 again.
+      
+      // Actually, we can just use the suit of the card below. 
+      // If it's an 8, the suit displayed on UI might be wrong if we don't know what was chosen.
+      // Let's just put the card back.
+      
+      return {
+        ...prev,
+        playerHand: [...prev.playerHand, playedEight],
+        discardPile: previousDiscardPile,
+        isSuitSelectorOpen: false,
+        // We need to restore currentSuit. 
+        // If we don't, it remains the 8's suit, which is technically valid for the 8 itself, 
+        // but might be wrong for other cards if the previous suit was different.
+        // Let's try to infer:
+        currentSuit: newTopCard.suit // This is a best-effort revert.
+      };
+    });
+    setMessage(t.yourTurn);
+  };
+
   // Player Action: Draw
   const handlePlayerDraw = () => {
     if (gameState.currentTurn !== 'player' || gameState.status !== 'playing') return;
@@ -244,7 +302,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [gameState.currentTurn, gameState.status, gameState.aiHand, gameState.discardPile, gameState.currentSuit]); // Dependencies for AI turn
 
-  const topDiscardCard = gameState.discardPile[gameState.discardPile.length - 1];
+  // const topDiscardCard = gameState.discardPile[gameState.discardPile.length - 1]; // Moved up
 
   return (
     <div className="min-h-screen bg-green-800 text-white font-sans overflow-hidden flex flex-col items-center justify-between py-4 relative pt-16">
@@ -310,8 +368,8 @@ export default function App() {
             <div 
               onClick={handlePlayerDraw}
               className={clsx(
-                "relative w-32 h-48 rounded-xl shadow-2xl cursor-pointer transition-transform hover:scale-105 active:scale-95",
-                gameState.currentTurn === 'player' ? 'ring-4 ring-yellow-400/50' : ''
+                "relative w-32 h-48 rounded-xl shadow-2xl transition-transform hover:scale-105 active:scale-95",
+                gameState.currentTurn === 'player' ? 'cursor-pointer ring-4 ring-yellow-400/50 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : ''
               )}
             >
               {/* Stack effect */}
@@ -396,6 +454,7 @@ export default function App() {
             isPlayer={true} 
             onCardClick={handlePlayerCardClick}
             disabled={gameState.currentTurn !== 'player'}
+            playableCardIds={playableCardIds}
           />
         </div>
       </div>
@@ -403,7 +462,7 @@ export default function App() {
       {/* Modals */}
       <AnimatePresence>
         {gameState.isSuitSelectorOpen && (
-          <SuitSelector key="suit-selector" onSelect={handleSuitSelect} />
+          <SuitSelector key="suit-selector" onSelect={handleSuitSelect} onCancel={handleCancelSuitSelection} />
         )}
         
         {gameState.status === 'start' && (

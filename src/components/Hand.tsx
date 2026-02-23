@@ -8,34 +8,31 @@ interface HandProps {
   isPlayer: boolean;
   onCardClick?: (card: CardType) => void;
   disabled?: boolean;
-  validMoves?: string[]; // Array of card IDs that are valid
+  playableCardIds?: Set<string>;
 }
 
-export const Hand: React.FC<HandProps> = ({ cards, isPlayer, onCardClick, disabled, validMoves = [] }) => {
+export const Hand: React.FC<HandProps> = ({ cards, isPlayer, onCardClick, disabled, playableCardIds }) => {
   return (
-    <div className="flex justify-center items-center gap-2 md:gap-4 overflow-x-auto p-4 min-h-[180px] px-8">
-      {cards.map((card, index) => {
-        const isPlayable = validMoves.includes(card.id);
-        return (
-          <motion.div
-            key={card.id}
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: index * 0.05 }}
-            className="relative"
-            style={{ zIndex: index }}
-          >
-            <Card
-              card={card}
-              isFaceUp={isPlayer} // AI cards are face down
-              onClick={() => onCardClick && onCardClick(card)}
-              disabled={disabled}
-              isPlayable={isPlayable}
-              className={isPlayer ? 'hover:-translate-y-4 transition-transform' : ''}
-            />
-          </motion.div>
-        );
-      })}
+    <div className="flex justify-center items-center gap-2 md:gap-4 overflow-x-auto p-4 min-h-[160px]">
+      {cards.map((card, index) => (
+        <motion.div
+          key={card.id}
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: index * 0.05 }}
+          className="relative"
+          style={{ zIndex: index }}
+        >
+          <Card
+            card={card}
+            isFaceUp={isPlayer} // AI cards are face down
+            onClick={() => onCardClick && onCardClick(card)}
+            disabled={disabled}
+            isPlayable={isPlayer && playableCardIds?.has(card.id)}
+            className={isPlayer ? 'hover:-translate-y-4 transition-transform' : ''}
+          />
+        </motion.div>
+      ))}
     </div>
   );
 };

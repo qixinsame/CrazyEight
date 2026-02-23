@@ -11,6 +11,7 @@ interface CardProps {
   className?: string;
   disabled?: boolean;
   style?: React.CSSProperties;
+  isPlayable?: boolean;
 }
 
 const SuitIcon = ({ suit, className }: { suit: Suit; className?: string }) => {
@@ -28,7 +29,7 @@ const SuitIcon = ({ suit, className }: { suit: Suit; className?: string }) => {
   }
 };
 
-export const Card: React.FC<CardProps> = ({ card, isFaceUp = true, onClick, className, disabled, style }) => {
+export const Card: React.FC<CardProps> = ({ card, isFaceUp = true, onClick, className, disabled, style, isPlayable }) => {
   const isRed = card.suit === 'hearts' || card.suit === 'diamonds';
 
   return (
@@ -41,9 +42,10 @@ export const Card: React.FC<CardProps> = ({ card, isFaceUp = true, onClick, clas
       whileTap={!disabled && isFaceUp ? { scale: 0.95 } : {}}
       onClick={!disabled ? onClick : undefined}
       className={clsx(
-        'relative w-24 h-36 rounded-xl shadow-md border border-gray-200 select-none cursor-pointer transition-colors',
+        'relative w-24 h-36 rounded-xl shadow-md border border-gray-200 select-none cursor-pointer transition-all duration-300',
         isFaceUp ? 'bg-white' : 'bg-blue-600',
         disabled && 'opacity-50 cursor-not-allowed',
+        isPlayable && !disabled && 'ring-4 ring-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.6)] -translate-y-2',
         className
       )}
       style={style}
