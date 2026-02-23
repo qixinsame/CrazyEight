@@ -65,8 +65,28 @@ export const Card: React.FC<CardProps> = ({ card, isFaceUp = true, onClick, clas
           </div>
         </div>
       ) : (
-        <div className="w-full h-full rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center">
-             <div className="w-20 h-32 border-2 border-blue-400/30 rounded-lg m-auto opacity-50" />
+        <div className="w-full h-full rounded-xl bg-red-900 border-2 border-white overflow-hidden relative shadow-inner">
+             {/* Ornate Pattern Background */}
+             <div className="absolute inset-0 opacity-20" style={{
+                 backgroundImage: `radial-gradient(circle, #fbbf24 2px, transparent 2.5px), radial-gradient(circle, #fbbf24 2px, transparent 2.5px)`,
+                 backgroundSize: '16px 16px',
+                 backgroundPosition: '0 0, 8px 8px'
+             }} />
+             
+             {/* Inner Border */}
+             <div className="absolute inset-1 border border-yellow-500/50 rounded-lg" />
+             <div className="absolute inset-2 border border-yellow-500/30 rounded-md" />
+             
+             {/* Center Medallion */}
+             <div className="absolute inset-0 flex items-center justify-center">
+                 <div className="w-14 h-20 bg-red-950 border border-yellow-500 rounded-full flex items-center justify-center shadow-lg">
+                     <div className="w-12 h-18 border border-yellow-500/30 rounded-full flex items-center justify-center">
+                         <span className="text-yellow-400 font-serif font-bold text-xl tracking-widest drop-shadow-md select-none" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>
+                             齐欣
+                         </span>
+                     </div>
+                 </div>
+             </div>
         </div>
       )}
     </motion.div>

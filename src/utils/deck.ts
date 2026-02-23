@@ -5,12 +5,11 @@ const RANKS: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', '
 
 export const createDeck = (): Card[] => {
   const deck: Card[] = [];
-  let idCounter = 0;
 
   for (const suit of SUITS) {
     for (let i = 0; i < RANKS.length; i++) {
       deck.push({
-        id: `card-${idCounter++}`,
+        id: crypto.randomUUID(),
         suit,
         rank: RANKS[i],
         value: i + 2, // 2=2, ..., 10=10, J=11, Q=12, K=13, A=14

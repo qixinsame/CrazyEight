@@ -6,8 +6,9 @@ import { createDeck, shuffleDeck, dealCards } from './utils/deck';
 import { Card as CardComponent } from './components/Card';
 import { Hand } from './components/Hand';
 import { SuitSelector } from './components/SuitSelector';
-import { RefreshCw, Trophy, Frown, Play, Dices, BookOpen, X } from 'lucide-react';
+import { RefreshCw, Trophy, Frown, Play, Dices, BookOpen, X, Globe, HelpCircle } from 'lucide-react';
 import clsx from 'clsx';
+import { translations, Language } from './translations';
 
 const AI_DELAY = 1000;
 
@@ -26,6 +27,10 @@ export default function App() {
 
   const [message, setMessage] = useState<string>('');
   const [showRules, setShowRules] = useState(false);
+  const [language, setLanguage] = useState<Language>('en');
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  
+  const t = translations[language];
 
   // Initialize Game
   const startNewGame = useCallback(() => {
@@ -48,8 +53,8 @@ export default function App() {
       winner: null,
       isSuitSelectorOpen: false,
     });
-    setMessage('Your turn!');
-  }, []);
+    setMessage(translations[language].yourTurn);
+  }, [language]);
 
   // Check for winner
   useEffect(() => {
@@ -64,12 +69,12 @@ export default function App() {
         spread: 70,
         origin: { y: 0.6 }
       });
-      setMessage('You won!');
+      setMessage(t.youWon);
     } else if (gameState.aiHand.length === 0) {
       setGameState(prev => ({ ...prev, status: 'lost', winner: 'ai' }));
-      setMessage('AI won!');
+      setMessage(t.aiWon);
     }
-  }, [gameState.playerHand.length, gameState.aiHand.length, gameState.status]);
+  }, [gameState.playerHand.length, gameState.aiHand.length, gameState.status, t]);
 
   // Helper: Check if move is valid
   const isValidMove = (card: Card, topCard: Card, currentSuit: Suit | null): boolean => {
@@ -88,7 +93,7 @@ export default function App() {
       if (deck.length === 0) {
         if (discardPile.length <= 1) {
           // No cards to draw, skip turn
-          setMessage(`${player === 'player' ? 'You' : 'AI'} skipped turn (no cards)`);
+          setMessage(t.skippedTurn(player === 'player' ? 'You' : 'AI'));
           return {
             ...prev,
             currentTurn: player === 'player' ? 'ai' : 'player',
@@ -99,7 +104,7 @@ export default function App() {
         const cardsToShuffle = discardPile.slice(0, discardPile.length - 1);
         deck = shuffleDeck(cardsToShuffle);
         discardPile = [topDiscard];
-        setMessage('Deck reshuffled!');
+        setMessage(t.deckReshuffled);
       }
 
       const newCard = deck[0];
@@ -128,27 +133,37 @@ export default function App() {
     if (isValidMove(card, topCard, gameState.currentSuit)) {
       if (card.rank === '8') {
         // Play 8, open suit selector
-        setGameState(prev => ({
-          ...prev,
-          playerHand: prev.playerHand.filter(c => c.id !== card.id),
-          discardPile: [...prev.discardPile, card],
-          isSuitSelectorOpen: true,
-          currentSuit: card.suit, // Temporarily set to card suit, will be updated by selector
-        }));
+        setGameState(prev => {
+          // Guard: Card must be in hand
+          if (!prev.playerHand.find(c => c.id === card.id)) return prev;
+
+          return {
+            ...prev,
+            playerHand: prev.playerHand.filter(c => c.id !== card.id),
+            discardPile: [...prev.discardPile, card],
+            isSuitSelectorOpen: true,
+            currentSuit: card.suit, // Temporarily set to card suit, will be updated by selector
+          };
+        });
       } else {
         // Normal play
-        setGameState(prev => ({
-          ...prev,
-          playerHand: prev.playerHand.filter(c => c.id !== card.id),
-          discardPile: [...prev.discardPile, card],
-          currentTurn: 'ai',
-          currentSuit: card.suit,
-        }));
-        setMessage('AI turn...');
+        setGameState(prev => {
+          // Guard: Card must be in hand
+          if (!prev.playerHand.find(c => c.id === card.id)) return prev;
+
+          return {
+            ...prev,
+            playerHand: prev.playerHand.filter(c => c.id !== card.id),
+            discardPile: [...prev.discardPile, card],
+            currentTurn: 'ai',
+            currentSuit: card.suit,
+          };
+        });
+        setMessage(t.aiTurn);
       }
     } else {
-      setMessage('Invalid move!');
-      setTimeout(() => setMessage('Your turn!'), 1000);
+      setMessage(t.invalidMove);
+      setTimeout(() => setMessage(t.yourTurn), 1000);
     }
   };
 
@@ -160,7 +175,7 @@ export default function App() {
       isSuitSelectorOpen: false,
       currentTurn: 'ai',
     }));
-    setMessage(`Suit changed to ${suit}. AI turn...`);
+    setMessage(t.suitChanged(suit));
   };
 
   // Player Action: Draw
@@ -198,7 +213,7 @@ export default function App() {
           currentTurn: 'player',
           currentSuit: cardToPlay.suit,
         }));
-        setMessage('Your turn!');
+        setMessage(t.yourTurn);
       } else if (eights.length > 0) {
         // Play 8
         const cardToPlay = eights[0];
@@ -219,7 +234,7 @@ export default function App() {
           currentTurn: 'player',
           currentSuit: bestSuit,
         }));
-        setMessage(`AI played 8 and chose ${bestSuit}. Your turn!`);
+        setMessage(t.aiPlayed8(bestSuit));
       } else {
         // Draw
         drawCard('ai');
@@ -232,18 +247,39 @@ export default function App() {
   const topDiscardCard = gameState.discardPile[gameState.discardPile.length - 1];
 
   return (
-    <div className="min-h-screen bg-green-800 text-white font-sans overflow-hidden flex flex-col items-center justify-between py-4 relative">
+    <div className="min-h-screen bg-green-800 text-white font-sans overflow-hidden flex flex-col items-center justify-between py-4 relative pt-16">
+      {/* Top Banner */}
+      <div className="fixed top-0 left-0 right-0 h-14 bg-black/40 backdrop-blur-md border-b border-white/10 z-50 flex justify-between items-center px-4 md:px-8">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setLanguage(l => l === 'en' ? 'zh' : 'en')}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-sm font-medium"
+          >
+            <Globe className="w-4 h-4" />
+            {language === 'en' ? '中文' : 'English'}
+          </button>
+        </div>
+        
+        <button 
+          onClick={() => setIsHelpOpen(true)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-sm font-medium"
+        >
+          <HelpCircle className="w-4 h-4" />
+          {t.help}
+        </button>
+      </div>
+
       {/* Header / Status */}
       <div className="w-full max-w-4xl px-4 flex justify-between items-center z-10">
         <div className="flex items-center gap-2">
            <div className="bg-black/30 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
-             <span className="text-sm font-medium opacity-80">AI Cards:</span>
+             <span className="text-sm font-medium opacity-80">{t.aiCards}</span>
              <span className="ml-2 text-xl font-bold">{gameState.aiHand.length}</span>
            </div>
         </div>
         
         <div className="flex flex-col items-center">
-          <h1 className="text-2xl font-bold tracking-wider text-green-100 drop-shadow-md">CRAZY EIGHTS</h1>
+          <h1 className="text-2xl font-bold tracking-wider text-green-100 drop-shadow-md">{t.title}</h1>
           <div className="mt-1 px-4 py-1 bg-white/10 rounded-full text-sm font-medium animate-pulse">
             {message}
           </div>
@@ -252,7 +288,7 @@ export default function App() {
         <button 
           onClick={startNewGame}
           className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-          title="Restart Game"
+          title={t.playAgain}
         >
           <RefreshCw className="w-5 h-5" />
         </button>
@@ -283,7 +319,7 @@ export default function App() {
               <div className="absolute top-0.5 left-0.5 w-full h-full bg-blue-800 rounded-xl border border-blue-400/20" />
               <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-blue-700 to-blue-900 rounded-xl border-2 border-white/20 flex items-center justify-center">
                 <div className="w-24 h-40 border-2 border-blue-400/30 rounded-lg opacity-50" />
-                <span className="absolute font-bold text-2xl text-white/20">DECK</span>
+                <span className="absolute font-bold text-2xl text-white/20">{t.deck}</span>
               </div>
             </div>
           ) : (
@@ -295,7 +331,7 @@ export default function App() {
                )}
              >
                <span className="text-white/40 font-bold uppercase tracking-widest">
-                 {gameState.discardPile.length > 1 ? 'Shuffle' : 'Pass'}
+                 {gameState.discardPile.length > 1 ? t.shuffle : t.pass}
                </span>
              </div>
           )}
@@ -328,7 +364,7 @@ export default function App() {
           {/* Current Suit Indicator (if 8 was played) */}
           {gameState.currentSuit && (
              <div className="absolute -right-16 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 bg-black/40 p-2 rounded-lg backdrop-blur-md border border-white/10">
-               <span className="text-xs uppercase tracking-wider opacity-70">Target</span>
+               <span className="text-xs uppercase tracking-wider opacity-70">{t.target}</span>
                <div className={clsx(
                  "p-2 rounded-full bg-white shadow-lg",
                  (gameState.currentSuit === 'hearts' || gameState.currentSuit === 'diamonds') ? 'text-red-500' : 'text-black'
@@ -346,9 +382,9 @@ export default function App() {
       {/* Player Hand */}
       <div className="w-full max-w-6xl px-4 pb-4 z-10">
         <div className="flex justify-between items-end mb-2 px-4">
-           <span className="text-sm font-medium opacity-80">Your Hand</span>
+           <span className="text-sm font-medium opacity-80">{t.yourHand}</span>
            {gameState.currentTurn === 'player' && (
-             <span className="text-yellow-300 font-bold animate-bounce">YOUR TURN</span>
+             <span className="text-yellow-300 font-bold animate-bounce">{t.yourTurn}</span>
            )}
         </div>
         <div className={clsx(
@@ -367,24 +403,25 @@ export default function App() {
       {/* Modals */}
       <AnimatePresence>
         {gameState.isSuitSelectorOpen && (
-          <SuitSelector onSelect={handleSuitSelect} />
+          <SuitSelector key="suit-selector" onSelect={handleSuitSelect} />
         )}
         
         {gameState.status === 'start' && (
           <motion.div
+            key="start-screen"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="fixed inset-0 z-50 flex items-center justify-center"
           >
-            {/* Background Image */}
+            {/* Background Image - Cartoon Casino Style */}
             <div className="absolute inset-0 z-0">
               <img 
-                src="https://picsum.photos/seed/casino/1920/1080?blur=2" 
-                alt="Casino Background" 
+                src="https://picsum.photos/seed/cartooncasino/1920/1080?blur=1" 
+                alt="Cartoon Casino Background" 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
               />
-              <div className="absolute inset-0 bg-black/60" />
+              <div className="absolute inset-0 bg-black/50" />
             </div>
 
             <motion.div 
@@ -393,25 +430,25 @@ export default function App() {
               className="relative z-10 bg-white/95 backdrop-blur-md text-gray-900 p-8 rounded-3xl shadow-2xl max-w-md w-full text-center mx-4 border border-white/20"
             >
               <div className="flex justify-center mb-6">
-                <div className="w-24 h-24 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl shadow-lg flex items-center justify-center transform rotate-3">
-                  <Dices className="w-14 h-14 text-white" />
+                <div className="w-24 h-24 bg-gradient-to-br from-red-600 to-red-800 rounded-2xl shadow-lg flex items-center justify-center transform rotate-3 border-4 border-yellow-400">
+                  <Dices className="w-14 h-14 text-yellow-400" />
                 </div>
               </div>
               
-              <h1 className="text-5xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 tracking-tight">
-                CRAZY<br/>EIGHTS
+              <h1 className="text-5xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-800 tracking-tight drop-shadow-sm">
+                {t.title}
               </h1>
               <p className="text-gray-600 mb-8 font-medium">
-                The classic card shedding game.
+                {t.subtitle}
               </p>
               
               <div className="space-y-3">
                 <button
                   onClick={startNewGame}
-                  className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:shadow-lg hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-2 shadow-purple-600/30"
+                  className="w-full py-4 bg-gradient-to-r from-red-600 to-red-800 text-white rounded-xl font-bold text-lg hover:shadow-lg hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-2 shadow-red-600/30 border border-yellow-400/50"
                 >
                   <Play className="w-6 h-6 fill-current" />
-                  Start Game
+                  {t.startGame}
                 </button>
                 
                 <button
@@ -419,24 +456,25 @@ export default function App() {
                   className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                 >
                   <BookOpen className="w-5 h-5" />
-                  {showRules ? 'Hide Rules' : 'How to Play'}
+                  {showRules ? t.hideRules : t.howToPlay}
                 </button>
               </div>
 
               <AnimatePresence>
                 {showRules && (
                   <motion.div
+                    key="rules"
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden text-left mt-4 bg-gray-50 rounded-xl"
                   >
                     <div className="p-4 text-sm text-gray-600 space-y-2">
-                      <p><strong>Goal:</strong> Be the first to empty your hand.</p>
+                      <p><strong>{t.rulesTitle}</strong></p>
                       <ul className="list-disc list-inside space-y-1">
-                        <li>Match the <strong>suit</strong> or <strong>rank</strong> of the top discard card.</li>
-                        <li><strong>8s are wild!</strong> Play an 8 anytime to change the suit.</li>
-                        <li>If you can't play, draw a card from the deck.</li>
+                        {t.rulesList.map((rule, i) => (
+                          <li key={i}>{rule}</li>
+                        ))}
                       </ul>
                     </div>
                   </motion.div>
@@ -445,9 +483,56 @@ export default function App() {
             </motion.div>
           </motion.div>
         )}
+
+        {/* Global Help Modal */}
+        <AnimatePresence>
+          {isHelpOpen && (
+            <motion.div
+              key="help-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+              onClick={() => setIsHelpOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <HelpCircle className="w-5 h-5 text-blue-600" />
+                    {t.helpTitle}
+                  </h2>
+                  <button 
+                    onClick={() => setIsHelpOpen(false)}
+                    className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+                <div className="p-6 text-gray-600 leading-relaxed">
+                  {t.helpContent}
+                </div>
+                <div className="p-4 bg-gray-50 flex justify-end">
+                  <button
+                    onClick={() => setIsHelpOpen(false)}
+                    className="px-6 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
+                  >
+                    {t.close}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {gameState.status !== 'playing' && gameState.status !== 'start' && (
           <motion.div
+            key="end-screen"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md"
@@ -462,16 +547,16 @@ export default function App() {
                   <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-yellow-600">
                     <Trophy className="w-10 h-10" />
                   </div>
-                  <h2 className="text-3xl font-bold mb-2">Victory!</h2>
-                  <p className="text-gray-600 mb-6">You cleared your hand first. Great game!</p>
+                  <h2 className="text-3xl font-bold mb-2">{t.victory}</h2>
+                  <p className="text-gray-600 mb-6">{t.victoryDesc}</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center">
                   <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-600">
                     <Frown className="w-10 h-10" />
                   </div>
-                  <h2 className="text-3xl font-bold mb-2">Defeat</h2>
-                  <p className="text-gray-600 mb-6">The AI cleared its hand before you.</p>
+                  <h2 className="text-3xl font-bold mb-2">{t.defeat}</h2>
+                  <p className="text-gray-600 mb-6">{t.defeatDesc}</p>
                 </div>
               )}
               
@@ -480,7 +565,7 @@ export default function App() {
                 className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg hover:bg-gray-800 transition-transform active:scale-95 flex items-center justify-center gap-2"
               >
                 <Play className="w-5 h-5 fill-current" />
-                Play Again
+                {t.playAgain}
               </button>
             </motion.div>
           </motion.div>
